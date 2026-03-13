@@ -13,6 +13,7 @@ class AgentState(TypedDict):
     entities: list[str]
     columns: list[str]
     rows: dict[str, Any]
+    columns_by_file: dict[str, Any]
     answer_text: str
 
 #This is the orchestrator
@@ -71,7 +72,11 @@ class FinanceAgentGraph :
         }
     
     def __analyze(self, state: AgentState) :
-        analyzer_result = self.__agents
+        analyzer_result = self.__agents.analyzer(state["prompt"], state["rows"], state["columns"])
+        return {
+            "columns_by_file": analyzer_result["columns_by_file"],
+            "answer_text": analyzer_result["final_response"]
+        }
 
     def __responder(self, state: AgentState) :
 

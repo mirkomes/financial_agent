@@ -1,5 +1,5 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
-from finance_agent.DataLoader import DataRepository
+from finance_agent.DataLoader import BASE_CONTEXT_COLUMNS, DataRepository
 from typing_extensions import Any
 import json, re
 
@@ -12,9 +12,13 @@ class Agents :
         match = re.search(r"(?s).*?```json\s*(\{.*?\})\s*```.*", response)
         return match.group(1)
     
-    def __invoke_llm(self, prompt) :
+    def __invoke_llm_json_response(self, prompt) :
         raw = self.__llm.invoke(prompt)
         return json.loads(self.__normalize_json_response(raw.content))
+    
+    def __invoke_llm_text_response(self, prompt) :
+        raw = self.__llm.invoke(prompt)
+        return raw.content
         
 
     #Classify the prompt between "Loopkup" and "Reasoning"
@@ -32,7 +36,7 @@ class Agents :
         Question: {user_prompt}
         """
         
-        parsed = self.__invoke_llm(prompt)
+        parsed = self.__invoke_llm_json_response(prompt)
 
         #Check the validity of the prompt type
         prompt_type = parsed.get("prompt_type")
@@ -60,7 +64,7 @@ class Agents :
         User question: {user_prompt}
         """
 
-        parsed = self.__invoke_llm(prompt)
+        parsed = self.__invoke_llm_json_response(prompt)
 
         if len(parsed["entities"]) > 2 :
             raise NotImplementedError("Cannot manage more than 2 entities in a request")
@@ -153,7 +157,7 @@ class Agents :
         The user request is described by the following prompt:
         {user_prompt}"""
 
-        parsed = self.__invoke_llm(prompt)
+        parsed = self.__invoke_llm_json_response(prompt)
 
         return {
             "columns": parsed["columns"],
@@ -166,5 +170,72 @@ class Agents :
         #Load all the needed data given the specified rows and columns
         #rows is a dictionary specifying the indexes of the rows to be considered for each available file
         #columns is a list of columns to be considered
+        file_priority = ["balance_sheet", "price", "ratios_1", "ratios_2"]
+        active_files = [file_id for file_id in file_priority if rows.get(file_id)]
+        columns_by_file = {}
+        unique_columns = list(dict.fromkeys(columns))
 
+        # Resolve each requested column on the active files only, following the file priority.
+        for column in unique_columns :
+            selected_file = None
+
+            for file_id in active_files :
+                if column in self.__data.data_frames[file_id].columns :
+                    selected_file = file_id
+                    break
+
+            if selected_file is None :
+                raise ValueError(f"Column '{column}' is not available in the selected rows")
+
+            if selected_file not in columns_by_file :
+                columns_by_file[selected_file] = []
+
+            columns_by_file[selected_file].append(column)
+
+        loaded_data = {}
+
+        # Load only the requested rows and the columns assigned to each file.
+        for file_id in active_files :
+            if file_id not in columns_by_file :
+                continue
+
+            selected_rows = rows[file_id]
+            selected_columns = columns_by_file[file_id]
+            context_columns = []
+
+            for column in BASE_CONTEXT_COLUMNS + selected_columns :
+                if column in self.__data.data_frames[file_id].columns and column not in context_columns :
+                    context_columns.append(column)
+
+            loaded_data[file_id] = self.__data.data_frames[file_id].iloc[selected_rows][context_columns].copy()
+
+        context_sections = []
+
+        # Convert each filtered dataframe into compact JSON text for the LLM context.
+        for file_id in active_files :
+            if file_id not in loaded_data :
+                continue
+
+            file_rows = loaded_data[file_id].to_dict(orient="records")
+            file_context_text = json.dumps(file_rows, ensure_ascii=True)
+            context_sections.append(f"{file_id}: {file_context_text}")
+
+        llm_context = "\n".join(context_sections)
+
+        prompt = f"""You are a financial expert and you must give an answer to the user request provided below based on the available data.
+        The available data that has been selected for providing the user an answer is the following:
+        
+        {llm_context}
+        
+        The user request is the following:
+        {user_prompt}
+        
+        Provide the user a coincise response that satisfies the request and provide also a motivation."""
+
+        llm_response = self.__invoke_llm_text_response(prompt)
+
+        return {
+            "columns_by_file": columns_by_file,
+            "final_response": llm_response
+        }
 
