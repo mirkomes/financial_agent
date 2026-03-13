@@ -156,7 +156,15 @@ class Agents :
         parsed = self.__invoke_llm(prompt)
 
         return {
-            "columns": parsed["columns"]
+            "columns": parsed["columns"],
+            "rows": retrieved_row_indexes
         }
+    
+    #Given the identified rows and columns, return the analysis requested by the user
+    #This analyzer is executed only in case of prompt having type "reasoning"
+    def analyzer(self, user_prompt, rows, columns) :
+        #Load all the needed data given the specified rows and columns
+        #rows is a dictionary specifying the indexes of the rows to be considered for each available file
+        #columns is a list of columns to be considered
 
 

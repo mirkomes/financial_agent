@@ -12,6 +12,7 @@ class AgentState(TypedDict):
     classifier_result: dict[str, Any]
     entities: list[str]
     columns: list[str]
+    rows: dict[str, Any]
     answer_text: str
 
 #This is the orchestrator
@@ -28,6 +29,9 @@ class FinanceAgentGraph :
         self.__agents = Agents(llm=self.__llm, data=self.__data)
         self.__graph = self.__compile_graph()
 
+    def __conditional_prompt_type(self, state: AgentState) :
+        return "analyze" if state["prompt_type"] == "reasoning" else "lookup_responder"
+
     def __compile_graph(self) :
         graph_builder = StateGraph(AgentState)
 
@@ -35,11 +39,15 @@ class FinanceAgentGraph :
         graph_builder.add_node("classify", self.__classify_prompt)
         graph_builder.add_node("entity_identifier", self.__entity_identifier)
         graph_builder.add_node("data_retriever", self.__data_retriever)
+        graph_builder.add_node("analyze", self.__analyze)
+        graph_builder.add_node("responder", self.__responder)
 
         graph_builder.add_edge(START, "classify")
         graph_builder.add_edge("classify", "entity_identifier")
         graph_builder.add_edge("entity_identifier", "data_retriever")
-        graph_builder.add_edge("data_retriever", END)
+        graph_builder.add_conditional_edges("data_retriever", self.__conditional_prompt_type)
+        graph_builder.add_edge("analyze", END)
+        graph_builder.add_edge("lookup_responder", END)
         return graph_builder.compile()
 
 
@@ -61,6 +69,12 @@ class FinanceAgentGraph :
         return {
             "columns": data_retriever_result["columns"]
         }
+    
+    def __analyze(self, state: AgentState) :
+        analyzer_result = self.__agents
+
+    def __responder(self, state: AgentState) :
+
         
             
     def run(self, prompt) :
