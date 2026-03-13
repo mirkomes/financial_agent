@@ -22,8 +22,8 @@ class DataRepository :
 
     def __init__(self, data_dir):
         self.__data_dir = data_dir
-        self.__data_frames = {} # Loaded data
-
+        self.data_frames = {} # Loaded data
+        self.data_frames_descriptions = {}
         self.__load_data()
 
     def __load_data(self) :
@@ -52,7 +52,8 @@ class DataRepository :
                 industries.add(industry)
 
             #Save the loaded data
-            self.__data_frames[file_id] = current_data_frame
+            self.data_frames[file_id] = current_data_frame
+            self.data_frames_descriptions[file_id] = FILE_DESCRIPTIONS[file_id]
 
 
     def __normalize_nse_code(self, value) :

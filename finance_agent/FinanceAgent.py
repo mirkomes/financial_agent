@@ -10,6 +10,7 @@ class AgentState(TypedDict):
     prompt: str #Prompt asked by the user
     prompt_type: str # Can be "Lookup" or "Reasoning"
     classifier_result: dict[str, Any]
+    entities: list[str]
     citations: list[dict[str, Any]]
     answer_text: str
 
@@ -32,11 +33,12 @@ class FinanceAgentGraph :
 
         #First agent will classify the type of prompt between "Lookup" or "Reasoning"
         graph_builder.add_node("classify", self.__classify_prompt)
+        graph_builder.add_node("entity_identifier", self.__entity_identifier)
 
         graph_builder.add_edge(START, "classify")
-        graph_builder.add_edge("classify", END)
+        graph_builder.add_edge("classify", "entity_identifier")
+        graph_builder.add_edge("entity_identifier", END)
         return graph_builder.compile()
-
 
 
     def __classify_prompt(self, state: AgentState) :
@@ -46,6 +48,13 @@ class FinanceAgentGraph :
             "classifier_result": classifier_result
         }
     
+    def __entity_identifier(self, state: AgentState) :
+        entity_identifier_result = self.__agents.entity_identifier(state["prompt"])
+        return {
+            "entities": entity_identifier_result["entities"]
+        }
+        
+            
     def run(self, prompt) :
         final_state = self.__graph.invoke({"prompt": prompt})
         return {

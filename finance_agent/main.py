@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None) :
                 prompts.append(prompt)
     else :
         #DEBUG MODE
-        prompts = ["What is the price of AARON?"]
+        prompts = ["What is the price of AARON and 63 Moons Tech.?"]
 
 
     #Load the configuration
