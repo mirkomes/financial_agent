@@ -41,7 +41,7 @@ class FinanceAgentGraph :
         graph_builder.add_node("entity_identifier", self.__entity_identifier)
         graph_builder.add_node("data_retriever", self.__data_retriever)
         graph_builder.add_node("analyze", self.__analyze)
-        graph_builder.add_node("responder", self.__responder)
+        graph_builder.add_node("lookup_responder", self.__responder)
 
         graph_builder.add_edge(START, "classify")
         graph_builder.add_edge("classify", "entity_identifier")
@@ -68,7 +68,8 @@ class FinanceAgentGraph :
     def __data_retriever(self, state: AgentState) :
         data_retriever_result = self.__agents.retriever(state["prompt"], state["prompt_type"], state["entities"])
         return {
-            "columns": data_retriever_result["columns"]
+            "columns": data_retriever_result["columns"],
+            "rows": data_retriever_result["rows"]
         }
     
     def __analyze(self, state: AgentState) :
@@ -79,7 +80,11 @@ class FinanceAgentGraph :
         }
 
     def __responder(self, state: AgentState) :
-
+        lookup_responder_result = self.__agents.lookup_responder(state["prompt"], state["rows"], state["columns"])
+        return {
+            "columns_by_file": lookup_responder_result["columns_by_file"],
+            "answer_text": lookup_responder_result["final_response"]
+        }
         
             
     def run(self, prompt) :

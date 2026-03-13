@@ -39,7 +39,8 @@ def main(argv: list[str] | None = None) :
                 prompts.append(prompt)
     else :
         #DEBUG MODE
-        prompts = ["What is the price of AARON and 63 Moons Tech.?"]
+        prompts = ["Compare the debt levels of 5PAISA vs Ador Fontech",
+                   "What is the price of AARON and 63 Moons Tech.?"]
 
 
     #Load the configuration

@@ -167,6 +167,55 @@ class Agents :
     #Given the identified rows and columns, return the analysis requested by the user
     #This analyzer is executed only in case of prompt having type "reasoning"
     def analyzer(self, user_prompt, rows, columns) :
+
+        #Load the data needed for the llm
+        llm_context, columns_by_file = self.__load_data_for_llm(rows, columns)
+
+        prompt = f"""You are a financial expert and you must give an answer to the user request provided below based on the available data.
+        The available data that has been selected for providing the user an answer is the following:
+        
+        {llm_context}
+        
+        The user request is the following:
+        {user_prompt}
+        
+        Provide the user a coincise response that satisfies the request and provide also a motivation. Do the proper calculations if the provided data
+        does not directly expose the values requested by the user."""
+
+        llm_response = self.__invoke_llm_text_response(prompt)
+
+        return {
+            "columns_by_file": columns_by_file,
+            "final_response": llm_response
+        }
+    
+    #Given the identified rows and columns, return the data requested by the user
+    #This responder is executed only in case of prompt having type "lookup"
+    def lookup_responder(self, user_prompt, rows, columns) :
+        
+        #Load the data needed for the llm
+        llm_context, columns_by_file = self.__load_data_for_llm(rows, columns)
+
+        prompt = f"""You are a financial expert and you must give an answer to the user request provided below based on the available data.
+        The available data that has been selected for providing the user an answer is the following:
+        
+        {llm_context}
+        
+        The user request is the following:
+        {user_prompt}
+        
+        Provide the user a coincise response that satisfies the request and provide also a motivation.
+        The available data is expected to answer the user request without doing any complex calculation."""
+
+        llm_response = self.__invoke_llm_text_response(prompt)
+
+        return {
+            "columns_by_file": columns_by_file,
+            "final_response": llm_response
+        }
+
+
+    def __load_data_for_llm(self, rows, columns) :
         #Load all the needed data given the specified rows and columns
         #rows is a dictionary specifying the indexes of the rows to be considered for each available file
         #columns is a list of columns to be considered
@@ -222,20 +271,6 @@ class Agents :
 
         llm_context = "\n".join(context_sections)
 
-        prompt = f"""You are a financial expert and you must give an answer to the user request provided below based on the available data.
-        The available data that has been selected for providing the user an answer is the following:
-        
-        {llm_context}
-        
-        The user request is the following:
-        {user_prompt}
-        
-        Provide the user a coincise response that satisfies the request and provide also a motivation."""
+        return llm_context, columns_by_file
 
-        llm_response = self.__invoke_llm_text_response(prompt)
-
-        return {
-            "columns_by_file": columns_by_file,
-            "final_response": llm_response
-        }
 
