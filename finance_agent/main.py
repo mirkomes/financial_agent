@@ -53,8 +53,10 @@ def main(argv: list[str] | None = None) :
     finance_agent = FinanceAgentGraph(config=config_obj, data=available_data)
 
     #Execute the agent for each prompt
+    prompt_results = []
     for prompt in prompts :
         current_prompt_result = finance_agent.run(prompt=prompt)
+        prompt_results.append(current_prompt_result)
 
 
 

@@ -14,6 +14,7 @@ class AgentState(TypedDict):
     columns: list[str]
     rows: dict[str, Any]
     columns_by_file: dict[str, Any]
+    citations: dict[str, Any]
     answer_text: str
 
 #This is the orchestrator
@@ -42,13 +43,15 @@ class FinanceAgentGraph :
         graph_builder.add_node("data_retriever", self.__data_retriever)
         graph_builder.add_node("analyze", self.__analyze)
         graph_builder.add_node("lookup_responder", self.__responder)
+        graph_builder.add_node("cite_data", self.__cite_data)
 
         graph_builder.add_edge(START, "classify")
         graph_builder.add_edge("classify", "entity_identifier")
         graph_builder.add_edge("entity_identifier", "data_retriever")
         graph_builder.add_conditional_edges("data_retriever", self.__conditional_prompt_type)
-        graph_builder.add_edge("analyze", END)
-        graph_builder.add_edge("lookup_responder", END)
+        graph_builder.add_edge("analyze", "cite_data")
+        graph_builder.add_edge("lookup_responder", "cite_data")
+        graph_builder.add_edge("cite_data", END)
         return graph_builder.compile()
 
 
@@ -85,7 +88,12 @@ class FinanceAgentGraph :
             "columns_by_file": lookup_responder_result["columns_by_file"],
             "answer_text": lookup_responder_result["final_response"]
         }
-        
+    
+    def __cite_data(self, state: AgentState) :
+        cite_result = self.__agents.cite_data(state["rows"], state["columns_by_file"])
+        return {
+            "citations": cite_result["citations"]
+        }
             
     def run(self, prompt) :
         final_state = self.__graph.invoke({"prompt": prompt})

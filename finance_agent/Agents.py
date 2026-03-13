@@ -1,5 +1,5 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
-from finance_agent.DataLoader import BASE_CONTEXT_COLUMNS, DataRepository
+from finance_agent.DataLoader import BASE_CONTEXT_COLUMNS, DATASET_FILES, DataRepository
 from typing_extensions import Any
 import json, re
 
@@ -212,6 +212,32 @@ class Agents :
         return {
             "columns_by_file": columns_by_file,
             "final_response": llm_response
+        }
+    
+    #Used to cite the data used for giving the user the final answer
+    def cite_data(self, rows, columns_by_file) :
+        citations = {}
+
+        for file_id, selected_columns in columns_by_file.items() :
+            #Consider only files where at least one row has been considered
+            selected_rows = rows.get(file_id, [])
+            if not selected_rows :
+                continue
+
+            #For each considered file, include the cited column of that file
+            available_columns = self.__data.data_frames[file_id].columns
+            citation_columns = []
+            for column in BASE_CONTEXT_COLUMNS + selected_columns :
+                if column in available_columns and column not in citation_columns :
+                    citation_columns.append(column)
+
+            citations[DATASET_FILES[file_id]] = {
+                "rows": selected_rows,
+                "columns": citation_columns
+            }
+
+        return {
+            "citations": citations
         }
 
 
