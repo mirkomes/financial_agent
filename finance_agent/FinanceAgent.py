@@ -34,10 +34,12 @@ class FinanceAgentGraph :
         #First agent will classify the type of prompt between "Lookup" or "Reasoning"
         graph_builder.add_node("classify", self.__classify_prompt)
         graph_builder.add_node("entity_identifier", self.__entity_identifier)
+        graph_builder.add_node("data_retriever", self.__data_retriever)
 
         graph_builder.add_edge(START, "classify")
         graph_builder.add_edge("classify", "entity_identifier")
-        graph_builder.add_edge("entity_identifier", END)
+        graph_builder.add_edge("entity_identifier", "data_retriever")
+        graph_builder.add_edge("data_retriever", END)
         return graph_builder.compile()
 
 
@@ -52,6 +54,12 @@ class FinanceAgentGraph :
         entity_identifier_result = self.__agents.entity_identifier(state["prompt"])
         return {
             "entities": entity_identifier_result["entities"]
+        }
+    
+    def __data_retriever(self, state: AgentState) :
+        data_retriever_result = self.__agents.retriever(state["prompt"], state["prompt_type"], state["entities"])
+        return {
+
         }
         
             

@@ -74,15 +74,55 @@ class Agents :
         #Maximum 2 rows will be retrieved
         #Rows identification is performed programmatically. The datasets are used as a KB in this case.
 
+        retrieved_row_indexes = {}
         entities_identified = True
+
         for financial_entity in financial_entities :
-            for data_frame_key, data_frame in self.__data.data_frames.itmes() :
-                
-                #Try to find the entity by Name first (with wildcards)
+            current_entity = financial_entity.strip()
+            current_entity_found = False
 
-                #Then try to find the entity by BSE code (exact key)
+            for data_frame_key, data_frame in self.__data.data_frames.items() :
+                matched_rows = data_frame.iloc[0:0]
 
-                #Then try to find the entity by NSE code (exact key)
+                if data_frame_key not in retrieved_row_indexes :
+                    retrieved_row_indexes[data_frame_key] = []
+
+                #Try to find the entity by Name first using a SQL LIKE style match.
+                name_tokens = [re.escape(token) for token in current_entity.split() if token]
+                if name_tokens :
+                    like_pattern = ".*".join(name_tokens)
+                    matched_rows = data_frame[
+                        data_frame["Name"].astype(str).str.contains(like_pattern, case=False, na=False, regex=True)
+                    ]
+
+                #Then try to find the entity by BSE code using an exact match.
+                if matched_rows.empty :
+                    bse_code = re.sub(r"\.0$", "", current_entity) # Remove the ".0" suffix, which is present for some codes
+                    matched_rows = data_frame[
+                        data_frame["BSE Code"].astype(str).str.replace(r"\.0$", "", regex=True).str.strip() == bse_code
+                    ]
+
+                #Then try to find the entity by NSE code using an exact match.
+                if matched_rows.empty :
+                    nse_code = current_entity.upper()
+                    matched_rows = data_frame[
+                        data_frame["NSE Code"].astype(str).str.strip().str.upper() == nse_code
+                    ]
+
+                if len(matched_rows) > 1 :
+                    raise ValueError(f"Ambiguous entity match for '{current_entity}' in dataset '{data_frame_key}'")
+
+                if not matched_rows.empty :
+                    row_indexes = matched_rows.index.tolist()
+
+                    retrieved_row_indexes[data_frame_key].extend(row_indexes)
+                    current_entity_found = True
+
+            if not current_entity_found :
+                entities_identified = False
+
+        if not entities_identified :
+            raise ValueError("Could not identify all requested financial entities")
 
 
 
