@@ -1,5 +1,3 @@
-
-from argparse import ArgumentParser
 from pathlib import Path
 from langchain_google_genai import ChatGoogleGenerativeAI
 from ragas import EvaluationDataset, evaluate
@@ -11,11 +9,12 @@ import os
 
 # For local debug ONLY
 IS_DEBUG = True
+package_root = Path(__file__).resolve().parents[1]
 if __package__ is None or __package__ == "":
-    package_root = Path(__file__).resolve().parents[1]
     if str(package_root) not in sys.path:
         sys.path.insert(0, str(package_root))
 
+from finance_agent.ArgumentParser import ArgumentParser
 from finance_agent.config import AppConfig
 from finance_agent.DataLoader import DataRepository
 from finance_agent.FinanceAgent import FinanceAgentGraph
@@ -82,8 +81,8 @@ def main(argv: list[str] | None = None) :
         argument_parser = ArgumentParser()
         args = argument_parser.parse_args(argv)
 
-        if args.query is not None :
-            prompts.append(args.query)
+        if args.prompt is not None :
+            prompts.append(args.prompt)
         elif args.batch_file_path is not None :
             
             # Load the file containing the batch of prompts
