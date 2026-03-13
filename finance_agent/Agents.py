@@ -1,7 +1,7 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from finance_agent.DataLoader import BASE_CONTEXT_COLUMNS, DATASET_FILES, DataRepository
 from typing_extensions import Any
-import json, re
+import json, re, time
 
 class Agents :
     def __init__(self, llm: ChatGoogleGenerativeAI, data: DataRepository) :
@@ -14,10 +14,12 @@ class Agents :
     
     def __invoke_llm_json_response(self, prompt) :
         raw = self.__llm.invoke(prompt)
+        time.sleep(5) # Avoid exceeding quotas
         return json.loads(self.__normalize_json_response(raw.content))
     
     def __invoke_llm_text_response(self, prompt) :
         raw = self.__llm.invoke(prompt)
+        time.sleep(5) # Avoid exceeding quotas
         return raw.content
         
 
@@ -169,7 +171,7 @@ class Agents :
     def analyzer(self, user_prompt, rows, columns) :
 
         #Load the data needed for the llm
-        llm_context, columns_by_file = self.__load_data_for_llm(rows, columns)
+        llm_context, columns_by_file, retrieved_contexts = self.__load_data_for_llm(rows, columns)
 
         prompt = f"""You are a financial expert and you must give an answer to the user request provided below based on the available data.
         The available data that has been selected for providing the user an answer is the following:
@@ -186,6 +188,7 @@ class Agents :
 
         return {
             "columns_by_file": columns_by_file,
+            "retrieved_contexts": retrieved_contexts,
             "final_response": llm_response
         }
     
@@ -194,7 +197,7 @@ class Agents :
     def lookup_responder(self, user_prompt, rows, columns) :
         
         #Load the data needed for the llm
-        llm_context, columns_by_file = self.__load_data_for_llm(rows, columns)
+        llm_context, columns_by_file, retrieved_contexts = self.__load_data_for_llm(rows, columns)
 
         prompt = f"""You are a financial expert and you must give an answer to the user request provided below based on the available data.
         The available data that has been selected for providing the user an answer is the following:
@@ -211,6 +214,7 @@ class Agents :
 
         return {
             "columns_by_file": columns_by_file,
+            "retrieved_contexts": retrieved_contexts,
             "final_response": llm_response
         }
     
@@ -284,7 +288,7 @@ class Agents :
 
             loaded_data[file_id] = self.__data.data_frames[file_id].iloc[selected_rows][context_columns].copy()
 
-        context_sections = []
+        context_sections = [] #These context sections will be used for evaluation purposes via Ragas
 
         # Convert each filtered dataframe into compact JSON text for the LLM context.
         for file_id in active_files :
@@ -297,6 +301,6 @@ class Agents :
 
         llm_context = "\n".join(context_sections)
 
-        return llm_context, columns_by_file
+        return llm_context, columns_by_file, context_sections
 
 

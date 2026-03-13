@@ -1,0 +1,5 @@
+langchain==0.3.27
+langgraph==0.3.34
+langchain-google-genai==2.1.8
+pandas==2.2.3
+ragas==0.2.14

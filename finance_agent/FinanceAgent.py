@@ -15,6 +15,7 @@ class AgentState(TypedDict):
     rows: dict[str, Any]
     columns_by_file: dict[str, Any]
     citations: dict[str, Any]
+    retrieved_contexts: list[str]
     answer_text: str
 
 #This is the orchestrator
@@ -79,6 +80,7 @@ class FinanceAgentGraph :
         analyzer_result = self.__agents.analyzer(state["prompt"], state["rows"], state["columns"])
         return {
             "columns_by_file": analyzer_result["columns_by_file"],
+            "retrieved_contexts": analyzer_result["retrieved_contexts"],
             "answer_text": analyzer_result["final_response"]
         }
 
@@ -86,6 +88,7 @@ class FinanceAgentGraph :
         lookup_responder_result = self.__agents.lookup_responder(state["prompt"], state["rows"], state["columns"])
         return {
             "columns_by_file": lookup_responder_result["columns_by_file"],
+            "retrieved_contexts": lookup_responder_result["retrieved_contexts"],
             "answer_text": lookup_responder_result["final_response"]
         }
     
@@ -100,5 +103,8 @@ class FinanceAgentGraph :
         return {
             "prompt": prompt,
             "prompt_type": final_state["prompt_type"],
-            "classifier_result": final_state["classifier_result"]
+            "classifier_result": final_state["classifier_result"],
+            "citations": final_state["citations"],
+            "retrieved_contexts": final_state["retrieved_contexts"],
+            "answer_text": final_state["answer_text"]
         }
