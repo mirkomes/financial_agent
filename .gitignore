@@ -1,0 +1,25 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Local environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+
+# Local configuration and secrets
+config.json
+.env
+.env.*
+
+# Local data archives
+data/kaggle_dataset.zip
+
+# OS files
+.DS_Store
+Thumbs.db

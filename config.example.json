@@ -1,0 +1,5 @@
+{
+  "google_api_key": "YOUR_GOOGLE_API_KEY",
+  "model": "gemini-2.5-flash",
+  "data_dir": "data"
+}
