@@ -11,7 +11,7 @@ class AgentState(TypedDict):
     prompt_type: str # Can be "Lookup" or "Reasoning"
     classifier_result: dict[str, Any]
     entities: list[str]
-    citations: list[dict[str, Any]]
+    columns: list[str]
     answer_text: str
 
 #This is the orchestrator
@@ -59,7 +59,7 @@ class FinanceAgentGraph :
     def __data_retriever(self, state: AgentState) :
         data_retriever_result = self.__agents.retriever(state["prompt"], state["prompt_type"], state["entities"])
         return {
-
+            "columns": data_retriever_result["columns"]
         }
         
             

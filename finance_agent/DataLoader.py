@@ -24,6 +24,7 @@ class DataRepository :
         self.__data_dir = data_dir
         self.data_frames = {} # Loaded data
         self.data_frames_descriptions = {}
+        self.unique_quantitative_columns = []
         self.__load_data()
 
     def __load_data(self) :
@@ -39,7 +40,7 @@ class DataRepository :
 
             #Remove the join_key columns as it is not used
             if "join_key" in current_data_frame.columns :
-                current_data_frame.drop(columns=["join_key"])
+                current_data_frame = current_data_frame.drop(columns=["join_key"])
 
             #Normalize the loaded data
             current_data_frame["Name"] = current_data_frame["Name"].astype(str).str.strip()
@@ -54,6 +55,8 @@ class DataRepository :
             #Save the loaded data
             self.data_frames[file_id] = current_data_frame
             self.data_frames_descriptions[file_id] = FILE_DESCRIPTIONS[file_id]
+
+        self.unique_quantitative_columns = self.__build_unique_quantitative_columns()
 
 
     def __normalize_nse_code(self, value) :
@@ -70,3 +73,14 @@ class DataRepository :
             return ""
         text = str(value).strip()
         return "" if text == "-1.0" else text
+
+
+    def __build_unique_quantitative_columns(self) :
+        unique_columns = set()
+
+        for data_frame in self.data_frames.values() :
+            for column in data_frame.columns :
+                if column not in BASE_CONTEXT_COLUMNS :
+                    unique_columns.add(column)
+
+        return sorted(unique_columns)

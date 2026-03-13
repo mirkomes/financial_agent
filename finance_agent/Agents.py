@@ -11,6 +11,11 @@ class Agents :
     def __normalize_json_response(self, response) :
         match = re.search(r"(?s).*?```json\s*(\{.*?\})\s*```.*", response)
         return match.group(1)
+    
+    def __invoke_llm(self, prompt) :
+        raw = self.__llm.invoke(prompt)
+        return json.loads(self.__normalize_json_response(raw.content))
+        
 
     #Classify the prompt between "Loopkup" and "Reasoning"
     def classify_prompt(self, user_prompt):
@@ -27,8 +32,7 @@ class Agents :
         Question: {user_prompt}
         """
         
-        raw = self.__llm.invoke(prompt)
-        parsed = json.loads(self.__normalize_json_response(raw.content))
+        parsed = self.__invoke_llm(prompt)
 
         #Check the validity of the prompt type
         prompt_type = parsed.get("prompt_type")
@@ -50,14 +54,13 @@ class Agents :
         {{
             "entities": []
         }}
-
+        
         where "entities" is the list of financial entities identified in the text of the user question.
         
         User question: {user_prompt}
         """
 
-        raw = self.__llm.invoke(prompt)
-        parsed = json.loads(self.__normalize_json_response(raw.content))
+        parsed = self.__invoke_llm(prompt)
 
         if len(parsed["entities"]) > 2 :
             raise NotImplementedError("Cannot manage more than 2 entities in a request")
@@ -123,16 +126,37 @@ class Agents :
 
         if not entities_identified :
             raise ValueError("Could not identify all requested financial entities")
-
-
-
-        prompt = f"""You are the retriever agent of a local financial analysis system.
-        Use the columns information below to decide which one of them must be considered for data retrieval based on the user request.
-        The user could have requested some data by specifying the exact column name or by specifying a column name that is not perfectly equal to the available ones.
-        In case an exact column name cannot be found, identify the column that fits most the data the user has requested.
-
-        The available files and columns are the following:
         
+        #If we arrive here it means that the entities have been identified.
+        #It is now time to retrieve the columns to be used for the lookup or the analysis
+        unique_columns_text = "; ".join(self.__data.unique_quantitative_columns)
+
+        prompt = f"""You are the data retriever agent of a local financial analysis system.
+        Use the columns information below to decide which one of them must be considered based on the user request. Each column contains quantitative data associated with financial entities (e.g. stocks).
+        The user could have requested some data or some analyses based on some data.
+        In case the request is of type "lookup", then we must just retrieve data from the available columns.
+        In case the request is of type "reasoning, then the retrieved columns will be used later for doing the proper comparisons or calculations as requested by the user.
+        Identify the column or the columns that fits most the data needed to accomplish the user request.
+
+        The available columns are the following and they are all representing quantitative data associated with financial entities like e.g. stocks (columns separated by ";"):
+        {unique_columns_text}
+
+        Return as output JSON only with the list of columns to be considered as follows:
+        {{
+            "columns": []
+        }}
+
+        where "columns" is the list of columns containing the quantitative data to be considered for answering the user request.
+
+        The request type is "{prompt_type}"
         
-        The user request is described by the following lookup prompt:
+        The user request is described by the following prompt:
         {user_prompt}"""
+
+        parsed = self.__invoke_llm(prompt)
+
+        return {
+            "columns": parsed["columns"]
+        }
+
+
